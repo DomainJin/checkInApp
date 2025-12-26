@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Check-in</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 HỆ THỐNG CHECK-IN</h1>
+            <p class="subtitle">Chọn khu vực để bắt đầu check-in</p>
+        </div>
+
+        <div class="area-selection">
+            <a href="/checkin/HCM" class="area-card hcm">
+                <div class="area-icon">🏙️</div>
+                <h2>HỒ CHÍ MINH</h2>
+                <p class="count">314 khách mời</p>
+                <button class="btn btn-primary">Bắt đầu check-in</button>
+            </a>
+
+            <a href="/checkin/Ha Noi" class="area-card hanoi">
+                <div class="area-icon">🏛️</div>
+                <h2>HÀ NỘI</h2>
+                <p class="count">115 khách mời</p>
+                <button class="btn btn-primary">Bắt đầu check-in</button>
+            </a>
+
+            <a href="/checkin/ALL" class="area-card all">
+                <div class="area-icon">🌐</div>
+                <h2>CẢ HAI KHU VỰC</h2>
+                <p class="count">429 khách mời</p>
+                <button class="btn btn-primary">Bắt đầu check-in</button>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>© 2025 - Check-in System</p>
+        </div>
+    </div>
+</body>
+</html>

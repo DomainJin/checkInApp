@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in - {{ sheet }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/" class="back-btn">← Quay lại</a>
+            <h1>📱 CHECK-IN: {{ sheet }}</h1>
+            <a href="/display/{{ sheet }}" target="_blank" class="display-btn">📺 Mở màn hình chào mừng</a>
+        </div>
+
+        <div class="checkin-area">
+            <!-- Camera View -->
+            <div class="camera-container">
+                <div id="qr-reader"></div>
+            </div>
+            
+            <!-- QR Box Size Control -->
+            <div class="qr-control">
+                <label for="qr-size">📐 Kích thước khung quét:</label>
+                <input type="range" id="qr-size" min="150" max="450" value="250" step="50">
+                <span id="qr-size-value">250px</span>
+            </div>
+
+            <!-- Status Display -->
+            <div id="status-container">
+                <div id="status-message" class="status-message"></div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="statistics-panel">
+                <h3>📊 Thống kê</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Tổng số</div>
+                        <div class="stat-value" id="stat-total">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Đã check-in</div>
+                        <div class="stat-value success" id="stat-checked">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Chưa check-in</div>
+                        <div class="stat-value" id="stat-pending">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Tỷ lệ</div>
+                        <div class="stat-value" id="stat-percentage">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Check-ins -->
+            <div class="recent-checkins">
+                <h3>📋 Check-in gần đây</h3>
+                <div id="recent-list"></div>
+            </div>
+
+            <!-- Download Button -->
+            <div class="actions">
+                <a href="/api/download" class="btn btn-download">📥 Tải file Excel</a>
+                <a href="/display/{{ sheet }}" target="_blank" class="btn btn-display">📺 Mở màn hình chào mừng</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

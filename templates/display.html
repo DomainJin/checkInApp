@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Màn hình chào mừng - {{ sheet }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Video Background */
+        .video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .video-background video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0);
+            z-index: 0;
+        }
+
+        .display-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        /* Welcome Idle Screen */
+        .welcome-idle {
+            text-align: center;
+            color: white;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .logo-icon {
+            font-size: 8rem;
+            margin-bottom: 30px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .welcome-idle h1 {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .welcome-subtitle {
+            font-size: 2rem;
+            opacity: 0.9;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.95; }
+        }
+
+        /* Welcome Guest Screen */
+        .welcome-guest {
+            display: none;
+            text-align: center;
+            color: white;
+            width: 100%;
+            padding: 40px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image: url("{{ url_for('static', filename='welcome.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 10;
+        }
+
+        .welcome-guest::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("{{ url_for('static', filename='welcome.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+            z-index: -1;
+        }
+
+        .welcome-guest.show {
+            display: block;
+            animation: slideInBackground 0.8s ease-out;
+        }
+
+        .welcome-guest.show::before {
+            opacity: 1;
+        }
+
+        @keyframes slideInBackground {
+            from {
+                opacity: 0;
+                transform: scale(1.2);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .welcome-icon {
+            font-size: 8rem;
+            animation: bounce 1s ease-in-out 3;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-30px); }
+        }
+
+        .welcome-title {
+            font-size: 5rem;
+            margin: 30px 0;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.3);
+            font-weight: bold;
+        }
+
+        .guest-info {
+            margin: 40px 0;
+            margin-top: 500px;
+        }
+
+        .guest-name {
+            font-size: 14rem;
+            /* justify-content: center; */
+            margin-top: 600px;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.2);
+        }
+
+        .guest-code {
+            font-size: 10rem;
+            /* opacity: 0.9; */
+            margin-top: 100px;
+        }
+
+        .guest-area {
+            font-size: 2.5rem;
+            color: #ffd700;
+            font-weight: bold;
+            margin-top: 20px;
+            visibility: hidden;
+        }
+
+        .welcome-message {
+            margin-top: 40px;
+            font-size: 2rem;
+            font-style: italic;
+            opacity: 0.95;
+        }
+
+        /* Confetti */
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            animation: confettiFall 3s linear forwards;
+        }
+
+        @keyframes confettiFall {
+            to {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Statistics */
+        .display-stats {
+            position: fixed;
+            bottom: 40px;
+            left: 40px;
+            right: 40px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            z-index: 100;
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-text {
+            font-size: 1.5rem;
+            opacity: 0.9;
+        }
+
+        /* Time Display */
+        .time-display {
+            position: fixed;
+            top: 30px;
+            right: 40px;
+            color: white;
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: rgba(255,255,255,0.1);
+            padding: 15px 30px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Video Background -->
+    <div class="video-background">
+        <video autoplay muted loop playsinline id="bg-video">
+            <source src="{{ url_for('static', filename='background.mp4') }}" type="video/mp4">
+        </video>
+    </div>
+    <div class="video-overlay"></div>
+
+    <div class="display-container">
+        <div class="confetti-container" id="confetti-container"></div>
+
+        <!-- Time Display -->
+        <div class="time-display" id="time-display"></div>
+
+        <!-- Idle Screen -->
+        <div class="welcome-idle" id="welcome-idle">
+            <!-- <div class="logo-icon">🎉</div>
+            <h1>Chào mừng đến với sự kiện</h1>
+            <p class="welcome-subtitle">Vui lòng quét mã QR tại quầy check-in</p> -->
+        </div>
+
+        <!-- Welcome Guest Screen -->
+        <div class="welcome-guest" id="welcome-guest">
+            <!-- <div class="welcome-icon">✨</div> -->
+            <!-- <h1 class="welcome-title">Chào mừng!</h1> -->
+            <div class="guest-info">
+
+                <div class="guest-name" id="guest-name"></div>
+                <div class="guest-code" id="guest-code"></div>
+                <div class="guest-area" id="guest-area"></div>
+                
+            </div>
+            <div class="welcome-message">
+                <!-- <p>Chúc bạn có trải nghiệm tuyệt vời! 🎊</p> -->
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <!-- <div class="display-stats">
+            <div class="stat-box">
+                <div class="stat-number" id="stat-checked">0</div>
+                <div class="stat-text">Đã check-in</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="stat-total">0</div>
+                <div class="stat-text">Tổng khách mời</div>
+            </div>
+        </div> -->
+    </div>
+
+    <script>
+        let lastCheckInTime = null;
+        let welcomeTimeout = null;
+
+        // Update time display
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('vi-VN', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('time-display').textContent = timeString;
+        }
+
+        // Update statistics
+        async function updateStatistics() {
+            try {
+                const response = await fetch('/api/statistics');
+                const stats = await response.json();
+                
+                document.getElementById('stat-checked').textContent = stats.checked_in || 0;
+                document.getElementById('stat-total').textContent = stats.total || 0;
+                
+            } catch (error) {
+                console.error('Statistics error:', error);
+            }
+        }
+
+        // Create confetti effect
+        function createConfetti() {
+            const container = document.getElementById('confetti-container');
+            container.innerHTML = '';
+            
+            const colors = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f7b731', '#ff9ff3', '#54a0ff'];
+            
+            for (let i = 0; i < 80; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                confetti.style.animationDuration = (Math.random() * 1 + 2) + 's';
+                container.appendChild(confetti);
+            }
+
+            // Clear confetti after animation
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 4000);
+        }
+
+        // Show welcome guest
+        function showWelcomeGuest(guestData) {
+            const welcomeIdle = document.getElementById('welcome-idle');
+            const welcomeGuest = document.getElementById('welcome-guest');
+            
+            // Clear existing timeout if any
+            if (welcomeTimeout) {
+                clearTimeout(welcomeTimeout);
+            }
+            
+            // Update guest info
+            document.getElementById('guest-name').textContent = guestData.name || 'Khách mời';
+            document.getElementById('guest-code').textContent =  (guestData.employee_id || '');
+            document.getElementById('guest-area').textContent = ' ' + (guestData.area || '');
+            
+            // Hide idle, show guest
+            welcomeIdle.style.display = 'none';
+            welcomeGuest.classList.add('show');
+            
+            // Create confetti
+            // createConfetti();
+            
+            // Play sound (optional)
+            playWelcomeSound();
+            
+            // Speak guest name
+            speakGuestName(guestData.name || 'Khách mời');
+            
+            // Return to idle after 2 seconds
+            welcomeTimeout = setTimeout(() => {
+                welcomeGuest.classList.remove('show');
+                setTimeout(() => {
+                    welcomeIdle.style.display = 'block';
+                }, 500);
+                welcomeTimeout = null;
+            }, 2000);
+        }
+
+        // Play welcome sound (optional)
+        function playWelcomeSound() {
+            // You can add audio here
+            // const audio = new Audio('/static/welcome.mp3');
+            // audio.play();
+        }
+
+        // Speak guest name using Text-to-Speech
+        function speakGuestName(name) {
+            if ('speechSynthesis' in window) {
+                console.log('Speech Synthesis available');
+                console.log('Speaking name:', name);
+                
+                // Cancel any ongoing speech
+                window.speechSynthesis.cancel();
+                
+                // Small delay to ensure cancel completes
+                setTimeout(() => {
+                    const utterance = new SpeechSynthesisUtterance('Welcome ' + name);
+                    
+                    // Try to use English voice
+                    const voices = window.speechSynthesis.getVoices();
+                    console.log('Available voices:', voices.length);
+                    const enVoice = voices.find(voice => voice.lang.includes('en'));
+                    if (enVoice) {
+                        utterance.voice = enVoice;
+                        console.log('Using English voice:', enVoice.name);
+                    } else {
+                        console.log('English voice not found, using default');
+                    }
+                    
+                    utterance.lang = 'en-US';
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1;
+                    utterance.volume = 1;
+                    
+                    utterance.onstart = () => console.log('Speech started');
+                    utterance.onend = () => console.log('Speech ended');
+                    utterance.onerror = (e) => console.error('Speech error:', e);
+                    
+                    window.speechSynthesis.speak(utterance);
+                    console.log('Speech command sent');
+                }, 100);
+            } else {
+                console.error('Speech Synthesis not supported');
+            }
+        }
+
+        // Poll for new check-ins
+        async function pollForNewCheckIns() {
+            try {
+                const response = await fetch('/api/latest-checkin');
+                const data = await response.json();
+                
+                if (data.success && data.time !== lastCheckInTime) {
+                    lastCheckInTime = data.time;
+                    showWelcomeGuest(data);
+                    updateStatistics();
+                }
+            } catch (error) {
+                // Ignore errors
+            }
+        }
+
+        // Initialize
+        updateTime();
+        updateStatistics();
+        
+        // Load voices
+        window.speechSynthesis.getVoices();
+        window.speechSynthesis.onvoiceschanged = () => {
+            const voices = window.speechSynthesis.getVoices();
+            console.log('Voices loaded:', voices.length);
+        };
+        
+        setInterval(updateTime, 1000);
+        setInterval(updateStatistics, 3000);
+        setInterval(pollForNewCheckIns, 1000);
+    </script>
+</body>
+</html>
