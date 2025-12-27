@@ -14,27 +14,50 @@
         </div>
 
         <div class="area-selection">
-            <a href="/checkin/HCM" class="area-card hcm">
+            <div class="area-card hcm" onclick="window.location.href='/checkin/HCM'" style="cursor: pointer;">
                 <div class="area-icon">🏙️</div>
                 <h2>HỒ CHÍ MINH</h2>
                 <p class="count">314 khách mời</p>
-                <button class="btn btn-primary">Bắt đầu check-in</button>
-            </a>
+                <button class="btn btn-primary">Check-in với 2 camera</button>
+            </div>
 
-            <a href="/checkin/Ha Noi" class="area-card hanoi">
+            <div class="area-card hanoi" onclick="window.location.href='/checkin/Ha Noi'" style="cursor: pointer;">
                 <div class="area-icon">🏛️</div>
                 <h2>HÀ NỘI</h2>
                 <p class="count">115 khách mời</p>
-                <button class="btn btn-primary">Bắt đầu check-in</button>
-            </a>
+                <button class="btn btn-primary">Check-in với 2 camera</button>
+            </div>
 
-            <a href="/checkin/ALL" class="area-card all">
+            <div class="area-card all" onclick="window.location.href='/checkin/ALL'" style="cursor: pointer;">
                 <div class="area-icon">🌐</div>
                 <h2>CẢ HAI KHU VỰC</h2>
                 <p class="count">429 khách mời</p>
-                <button class="btn btn-primary">Bắt đầu check-in</button>
-            </a>
+                <button class="btn btn-primary">Check-in với 2 camera</button>
+            </div>
         </div>
+        
+        <div class="area-selection" style="margin-top: 30px; border-top: 2px solid rgba(255,255,255,0.2); padding-top: 30px;">
+            <h2 style="color: white; text-align: center; margin-bottom: 20px;">📺 MÀN HÌNH CHÀO MỪNG</h2>
+            <div class="area-card hcm" onclick="openDisplay('HCM', 0)" style="cursor: pointer;">
+                <div class="area-icon">📺</div>
+                <h2>Màn hình chào mừng 1</h2>
+                <p class="count">Cho Camera 1</p>
+                <button class="btn btn-primary">Mở màn hình 1</button>
+            </div>
+
+            <div class="area-card hcm" onclick="openDisplay('HCM', 1)" style="cursor: pointer; opacity: 0.9;">
+                <div class="area-icon">📺</div>
+                <h2>Màn hình chào mừng 2</h2>
+                <p class="count">Cho Camera 2</p>
+                <button class="btn btn-primary">Mở màn hình 2</button>
+            </div>
+        </div>
+        
+        <script>
+            function openDisplay(sheet, channel) {
+                window.open(`/display/${sheet}/${channel}`, '_blank');
+            }
+        </script>
 
         <div class="footer">
             <p>© 2025 - Check-in System</p>

@@ -4,11 +4,17 @@ let lastScanTime = 0;
 const SCAN_COOLDOWN = 3000; // 3 seconds cooldown
 let isScanning = false;
 let qrBoxSize = 250; // Default QR box size
+let useOpenCVMode = false; // Toggle for OpenCV backend mode
 
 // Initialize camera and QR scanner
 async function initCamera() {
     // Show loading status
     showStatus('info', '⏳ Đang khởi động camera...');
+    
+    console.log('=== STARTING CAMERA INITIALIZATION ===');
+    console.log('Browser:', navigator.userAgent);
+    console.log('HTTPS:', window.location.protocol === 'https:');
+    console.log('Localhost:', window.location.hostname === 'localhost');
     
     try {
         // Check if Html5Qrcode is available
@@ -16,62 +22,146 @@ async function initCamera() {
             throw new Error('Thư viện html5-qrcode chưa được tải');
         }
         
+        console.log('Html5Qrcode library loaded');
+        
+        // Stop existing instance if any
+        if (html5QrCode) {
+            try {
+                await html5QrCode.stop();
+                console.log('Stopped previous camera instance');
+            } catch (e) {
+                console.log('No previous instance to stop');
+            }
+        }
+        
         html5QrCode = new Html5Qrcode("qr-reader");
+        console.log('Html5Qrcode instance created');
         
         // Get available cameras
+        console.log('Requesting camera permissions...');
         const devices = await Html5Qrcode.getCameras();
         
         if (!devices || devices.length === 0) {
             throw new Error('Không tìm thấy camera. Vui lòng kiểm tra camera của bạn.');
         }
         
-        console.log('Found cameras:', devices);
+        console.log('=== AVAILABLE CAMERAS ===');
+        console.log('Total cameras found:', devices.length);
+        devices.forEach((device, index) => {
+            console.log(`Camera ${index}:`, device.label || device.id);
+            console.log('  - ID:', device.id);
+            console.log('  - Label:', device.label);
+        });
         
-        // Prefer back camera if available
-        let cameraId = devices[0].id;
+        // Get camera index from data attribute
+        const qrReaderElement = document.getElementById('qr-reader');
+        const cameraIndex = parseInt(qrReaderElement.dataset.cameraIndex || '0');
+        console.log('Requested camera index:', cameraIndex);
         
-        for (let device of devices) {
-            const label = device.label || '';
-            console.log('Camera:', label);
-            if (label.toLowerCase().includes('back')) {
-                cameraId = device.id;
+        // Use camera by index (0 = first camera, 1 = second camera, etc.)
+        let selectedCameraIndex = cameraIndex;
+        if (selectedCameraIndex >= devices.length) {
+            console.warn(`Camera index ${selectedCameraIndex} not found, using first camera`);
+            selectedCameraIndex = 0;
+        }
+        
+        const cameraId = devices[selectedCameraIndex].id;
+        console.log(`=== USING CAMERA ${selectedCameraIndex} ===`);
+        console.log('Camera ID:', cameraId);
+        console.log('Camera Label:', devices[selectedCameraIndex].label || 'Unknown');
+        
+        // Try multiple configurations for better compatibility
+        const configs = [
+            // Config 1: Standard
+            {
+                fps: 10,
+                qrbox: { width: qrBoxSize, height: qrBoxSize },
+                aspectRatio: 1.0
+            },
+            // Config 2: Lower FPS for slower cameras
+            {
+                fps: 5,
+                qrbox: { width: qrBoxSize, height: qrBoxSize },
+                aspectRatio: 1.0,
+                videoConstraints: {
+                    facingMode: "environment"
+                }
+            },
+            // Config 3: Specific resolution
+            {
+                fps: 10,
+                qrbox: { width: qrBoxSize, height: qrBoxSize },
+                videoConstraints: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            },
+            // Config 4: Minimal config
+            {
+                fps: 10,
+                qrbox: qrBoxSize
+            }
+        ];
+        
+        console.log('=== TRYING CAMERA CONFIGS ===');
+        console.log('Total configs to try:', configs.length);
+        
+        // Try each config until one works
+        let started = false;
+        for (let i = 0; i < configs.length; i++) {
+            try {
+                console.log(`\n--- Config ${i + 1}/${configs.length} ---`);
+                console.log('Config details:', JSON.stringify(configs[i], null, 2));
+                
+                await html5QrCode.start(
+                    cameraId,
+                    configs[i],
+                    (decodedText, decodedResult) => {
+                        // Handle successful scan
+                        console.log('QR detected:', decodedText);
+                        handleQRCode(decodedText);
+                    },
+                    (errorMessage) => {
+                        // Scan error - ignore (happens frequently when no QR in view)
+                    }
+                );
+                started = true;
+                console.log(`✅ SUCCESS! Camera started with config ${i + 1}`);
                 break;
+            } catch (configError) {
+                console.error(`❌ Config ${i + 1} failed:`, configError);
+                console.error('Error name:', configError.name);
+                console.error('Error message:', configError.message);
+                if (i === configs.length - 1) {
+                    throw configError;
+                }
+                console.log(`Trying next config...`);
             }
         }
         
-        console.log('Using camera:', cameraId);
-        
-        // Start scanning with config
-        const config = {
-            fps: 10,
-            qrbox: { width: qrBoxSize, height: qrBoxSize },
-            aspectRatio: 1.0
-        };
-        
-        await html5QrCode.start(
-            cameraId,
-            config,
-            (decodedText, decodedResult) => {
-                // Handle successful scan
-                console.log('QR detected:', decodedText);
-                handleQRCode(decodedText);
-            },
-            (errorMessage) => {
-                // Scan error - ignore (happens frequently when no QR in view)
-            }
-        );
+        if (!started) {
+            throw new Error('Không thể khởi động camera với bất kỳ cấu hình nào');
+        }
         
         isScanning = true;
-        console.log('Camera started successfully');
+        console.log('=== CAMERA READY ===');
+        console.log('isScanning:', isScanning);
         showStatus('success', '✅ Camera đã sẵn sàng! Quét mã QR để check-in');
         
         // Auto-hide success message after 3 seconds
         setTimeout(() => {
-            document.getElementById('status-message').innerHTML = '';
+            const statusMsg = document.getElementById('status-message');
+            if (statusMsg && statusMsg.textContent.includes('sẵn sàng')) {
+                statusMsg.innerHTML = '';
+            }
         }, 3000);
         
     } catch (err) {
-        console.error('Camera initialization error:', err);
+        console.error('=== CAMERA INITIALIZATION FAILED ===');
+        console.error('Error:', err);
+        console.error('Error name:', err.name);
+        console.error('Error message:', err.message);
+        console.error('Stack:', err.stack);
         isScanning = false;
         
         let errorMsg = '❌ Lỗi khi khởi động camera';
@@ -88,35 +178,75 @@ async function initCamera() {
         
         showStatus('error', errorMsg);
         
-        // Show troubleshooting tips
+        // Show OpenCV fallback option
         const statusContainer = document.getElementById('status-message');
-        const currentUrl = window.location.href;
-        const isSecure = window.location.protocol === 'https:' || 
-                        window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1';
-        
-        let tips = `
-            <div style="margin-top: 10px; font-size: 0.9rem;">
-                <strong>Hướng dẫn khắc phục:</strong><br>`;
-        
-        if (!isSecure) {
-            tips += `
-                <div style="color: #dc3545; font-weight: bold; margin: 10px 0;">
-                    ⚠️ QUAN TRỌNG: Bạn đang truy cập từ địa chỉ không an toàn!<br>
-                    Vui lòng truy cập từ: <strong>http://localhost:5000</strong>
-                </div>`;
-        }
-        
-        tips += `
-                1. Truy cập từ <strong>http://localhost:5000</strong> (không phải IP khác)<br>
-                2. Cho phép trình duyệt truy cập camera<br>
-                3. Kiểm tra camera có hoạt động không<br>
-                4. Thử trình duyệt khác (Chrome/Edge khuyến nghị)<br>
-                5. Đảm bảo không có ứng dụng khác đang dùng camera
+        statusContainer.innerHTML += `
+            <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <strong>💡 Giải pháp:</strong><br>
+                <button onclick="initCamera()" style="margin: 10px 5px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    🔄 Thử lại
+                </button>
+                <button onclick="switchToOpenCVMode()" style="margin: 10px 5px; padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    📹 Chuyển sang OpenCV
+                </button>
             </div>
         `;
+    }
+}
+
+// Switch to OpenCV backend mode
+function switchToOpenCVMode() {
+    useOpenCVMode = true;
+    const qrReaderElement = document.getElementById('qr-reader');
+    qrReaderElement.innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+            <h3>🎥 Chế độ OpenCV (Backend Camera)</h3>
+            <div id="opencv-stream" style="margin: 20px auto; max-width: 640px;">
+                <img id="camera-feed" src="" style="width: 100%; border-radius: 10px; display: none;">
+                <p>Đang khởi động camera...</p>
+            </div>
+        </div>
+    `;
+    
+    showStatus('info', '🔄 Đang chuyển sang chế độ OpenCV...');
+    startOpenCVStream();
+}
+
+// Start OpenCV camera stream
+function startOpenCVStream() {
+    const qrReaderElement = document.getElementById('qr-reader');
+    const cameraIndex = parseInt(qrReaderElement.dataset.cameraIndex || '0');
+    const cameraFeed = document.getElementById('camera-feed');
+    const streamUrl = `/api/opencv-stream/${cameraIndex}`;
+    
+    // Start streaming
+    cameraFeed.src = streamUrl;
+    cameraFeed.style.display = 'block';
+    cameraFeed.nextElementSibling.style.display = 'none';
+    
+    isScanning = true;
+    showStatus('success', '✅ Camera OpenCV đã sẵn sàng! Quét mã QR để check-in');
+    
+    // Poll for QR detection from backend
+    setInterval(checkOpenCVDetection, 500);
+}
+
+// Check for QR code detection from OpenCV backend
+async function checkOpenCVDetection() {
+    if (!useOpenCVMode || !isScanning) return;
+    
+    try {
+        const qrReaderElement = document.getElementById('qr-reader');
+        const cameraIndex = parseInt(qrReaderElement.dataset.cameraIndex || '0');
         
-        statusContainer.innerHTML += tips;
+        const response = await fetch(`/api/opencv-qr/${cameraIndex}`);
+        const data = await response.json();
+        
+        if (data.qr_code) {
+            handleQRCode(data.qr_code);
+        }
+    } catch (error) {
+        // Ignore polling errors
     }
 }
 
@@ -137,6 +267,10 @@ async function handleQRCode(qrCode) {
     
     console.log('Processing QR Code:', qrCode);
     
+    // Get camera index from qr-reader element
+    const qrReaderElement = document.getElementById('qr-reader');
+    const cameraIndex = parseInt(qrReaderElement.dataset.cameraIndex || '0');
+    
     // Show scanning status
     showStatus('info', '🔍 Đang xử lý...');
     
@@ -146,7 +280,10 @@ async function handleQRCode(qrCode) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ qr_code: qrCode })
+            body: JSON.stringify({ 
+                qr_code: qrCode,
+                camera_index: cameraIndex 
+            })
         });
         
         const result = await response.json();

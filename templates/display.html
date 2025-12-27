@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Màn hình chào mừng - {{ sheet }}</title>
+    <title>Màn hình chào mừng {{ channel + 1 }} - {{ sheet }}</title>
     <style>
         * {
             margin: 0;
@@ -394,7 +394,7 @@
             
             // Update guest info
             document.getElementById('guest-name').textContent = guestData.name || 'Khách mời';
-            document.getElementById('guest-code').textContent =  (guestData.employee_id || '');
+            document.getElementById('guest-code').textContent = (guestData.employee_id || '');
             document.getElementById('guest-area').textContent = ' ' + (guestData.area || '');
             
             // Hide idle, show guest
@@ -468,25 +468,46 @@
             }
         }
 
-        // Poll for new check-ins
-        async function pollForNewCheckIns() {
-            try {
-                const response = await fetch('/api/latest-checkin');
-                const data = await response.json();
-                
-                if (data.success && data.time !== lastCheckInTime) {
-                    lastCheckInTime = data.time;
-                    showWelcomeGuest(data);
-                    updateStatistics();
+        // Setup Server-Sent Events for real-time check-ins
+        function setupEventStream() {
+            const displayChannel = {{ channel }};
+            const eventSource = new EventSource(`/api/checkin-stream/${displayChannel}`);
+            
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // Ignore heartbeat messages
+                    if (data.type === 'heartbeat' || data.type === 'connected') {
+                        console.log('SSE:', data.type, 'displayChannel:', displayChannel);
+                        return;
+                    }
+                    
+                    // Handle check-in event
+                    if (data.success && data.time !== lastCheckInTime) {
+                        lastCheckInTime = data.time;
+                        showWelcomeGuest(data);
+                        updateStatistics();
+                    }
+                } catch (error) {
+                    console.error('Error parsing SSE data:', error);
                 }
-            } catch (error) {
-                // Ignore errors
-            }
+            };
+            
+            eventSource.onerror = (error) => {
+                console.error('SSE connection error:', error);
+                eventSource.close();
+                // Reconnect after 3 seconds
+                setTimeout(setupEventStream, 3000);
+            };
+            
+            console.log(`SSE connection established for channel ${displayChannel}`);
         }
 
         // Initialize
         updateTime();
         updateStatistics();
+        setupEventStream();
         
         // Load voices
         window.speechSynthesis.getVoices();
@@ -497,7 +518,6 @@
         
         setInterval(updateTime, 1000);
         setInterval(updateStatistics, 3000);
-        setInterval(pollForNewCheckIns, 1000);
     </script>
 </body>
 </html>

@@ -8,26 +8,29 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="container" style="max-width: 100%;">
         <div class="header">
             <a href="/" class="back-btn">← Quay lại</a>
-            <h1>📱 CHECK-IN: {{ sheet }}</h1>
-            <a href="/display/{{ sheet }}" target="_blank" class="display-btn">📺 Mở màn hình chào mừng</a>
+            <h1>📱 CHECK-IN: {{ sheet }} - 2 Camera</h1>
+            <div>
+                <a href="/display/{{ sheet }}/0" target="_blank" class="display-btn" style="margin-right: 10px;">📺 Màn hình 1</a>
+                <a href="/display/{{ sheet }}/1" target="_blank" class="display-btn">📺 Màn hình 2</a>
+            </div>
         </div>
 
         <div class="checkin-area">
-            <!-- Camera View -->
-            <div class="camera-container">
-                <div id="qr-reader"></div>
+            <!-- Dual Camera View -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div class="camera-container">
+                    <h3 style="text-align: center; color: #667eea;">📷 Camera 1</h3>
+                    <div id="qr-reader-0" data-camera-index="0"></div>
+                </div>
+                <div class="camera-container">
+                    <h3 style="text-align: center; color: #764ba2;">📹 Camera 2</h3>
+                    <div id="qr-reader-1" data-camera-index="1"></div>
+                </div>
             </div>
             
-            <!-- QR Box Size Control -->
-            <div class="qr-control">
-                <label for="qr-size">📐 Kích thước khung quét:</label>
-                <input type="range" id="qr-size" min="150" max="450" value="250" step="50">
-                <span id="qr-size-value">250px</span>
-            </div>
-
             <!-- Status Display -->
             <div id="status-container">
                 <div id="status-message" class="status-message"></div>
@@ -65,11 +68,12 @@
             <!-- Download Button -->
             <div class="actions">
                 <a href="/api/download" class="btn btn-download">📥 Tải file Excel</a>
-                <a href="/display/{{ sheet }}" target="_blank" class="btn btn-display">📺 Mở màn hình chào mừng</a>
+                <a href="/display/{{ sheet }}/0" target="_blank" class="btn btn-display" style="margin-right: 10px;">📺 Màn hình 1</a>
+                <a href="/display/{{ sheet }}/1" target="_blank" class="btn btn-display">📺 Màn hình 2</a>
             </div>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='script-dual.js') }}"></script>
 </body>
 </html>
