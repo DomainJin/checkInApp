@@ -509,6 +509,28 @@
         updateStatistics();
         setupEventStream();
         
+        // Auto-enter fullscreen mode on load
+        setTimeout(() => {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log('Auto-fullscreen failed:', err);
+                    console.log('Please press F11 to enter fullscreen mode.');
+                });
+            }
+        }, 500);
+        
+        // Add F11 key handler for manual fullscreen toggle
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'F11') {
+                event.preventDefault();
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        });
+        
         // Load voices
         window.speechSynthesis.getVoices();
         window.speechSynthesis.onvoiceschanged = () => {

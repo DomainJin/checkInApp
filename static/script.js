@@ -3,7 +3,7 @@ let lastScannedCode = null;
 let lastScanTime = 0;
 const SCAN_COOLDOWN = 3000; // 3 seconds cooldown
 let isScanning = false;
-let qrBoxSize = 250; // Default QR box size
+let qrBoxSize = 1000; // Default QR box size
 let useOpenCVMode = false; // Toggle for OpenCV backend mode
 
 // Initialize camera and QR scanner

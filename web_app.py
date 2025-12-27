@@ -171,13 +171,15 @@ class WebCheckInApp:
     def parse_qr_code(self, qr_content):
         """Parse QR code content"""
         try:
-            parts = qr_content.split(' - ')
-            if len(parts) == 2:
-                employee_id = parts[0].strip()
-                name = parts[1].strip()
-                return employee_id, name
-            else:
-                return None, None
+            # Hỗ trợ nhiều format: 'ID-Name', 'ID - Name', 'ID  -  Name'
+            # Tìm dấu gạch ngang đầu tiên
+            if '-' in qr_content:
+                idx = qr_content.index('-')
+                employee_id = qr_content[:idx].strip()
+                name = qr_content[idx+1:].strip()
+                if employee_id and name:
+                    return employee_id, name
+            return None, None
         except:
             return None, None
     
@@ -235,9 +237,35 @@ class WebCheckInApp:
         return {
             'total': total,
             'checked_in': checked_in,
+            'pending': not_checked_in,
             'not_checked_in': not_checked_in,
             'percentage': round(checked_in/total*100, 1) if total > 0 else 0
         }
+    
+    def get_recent_checkins(self, limit=10):
+        """Get recent check-ins"""
+        if self.df is None:
+            return []
+        
+        # Lọc các dòng đã check-in và có thời gian
+        checked = self.df[self.df['Trạng thái check-in'] == 'Đã check-in'].copy()
+        
+        if len(checked) == 0:
+            return []
+        
+        # Sắp xếp theo thời gian check-in (mới nhất trước)
+        checked = checked.sort_values('Thời gian check-in', ascending=False)
+        
+        # Lấy limit dòng đầu
+        recent = []
+        for idx, row in checked.head(limit).iterrows():
+            recent.append({
+                'code': str(row['Mã nhân viên']),
+                'name': str(row['Tên Trên Thiệp']),
+                'time': str(row['Thời gian check-in'])
+            })
+        
+        return recent
 
 # Global app instance
 checkin_app = WebCheckInApp()
@@ -276,7 +304,7 @@ def api_checkin():
     global latest_checkin
     
     data = request.json
-    qr_code = data.get('qr_code', '')
+    qr_code = data.get('qr_code', '') or data.get('code', '')
     
     employee_id, name = checkin_app.parse_qr_code(qr_code)
     
@@ -301,12 +329,19 @@ def api_checkin():
     return jsonify(result)
 
 @app.route('/api/statistics')
+@app.route('/api/stats')
 def api_statistics():
     """API endpoint for statistics"""
     stats = checkin_app.get_statistics()
     if stats:
         return jsonify(stats)
     return jsonify({'error': 'No data loaded'}), 400
+
+@app.route('/api/recent')
+def api_recent_checkins():
+    """API endpoint for recent check-ins"""
+    recent = checkin_app.get_recent_checkins(limit=10)
+    return jsonify({'recent': recent})
 
 @app.route('/api/latest-checkin')
 def api_latest_checkin():
@@ -364,4 +399,18 @@ def opencv_qr_detection(camera_index):
     return jsonify({'qr_code': None})
 
 if __name__ == '__main__':
+    # Disable cache in development mode only
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.jinja_env.auto_reload = True
+    app.config['TEMPLATE_AUTO_RELOAD'] = True
+    
+    @app.after_request
+    def add_header(response):
+        """Disable caching for all responses in development"""
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+    
     app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)

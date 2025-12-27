@@ -55,7 +55,32 @@
         
         <script>
             function openDisplay(sheet, channel) {
-                window.open(`/display/${sheet}/${channel}`, '_blank');
+                // Open in a separate window (popup) instead of a tab
+                const width = screen.width;
+                const height = screen.height;
+                const displayWindow = window.open(
+                    `/display/${sheet}/${channel}`, 
+                    `display_${sheet}_${channel}`,
+                    `width=${width},height=${height},left=0,top=0,toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes`
+                );
+                
+                // Try to fullscreen the new window after a short delay
+                if (displayWindow) {
+                    setTimeout(() => {
+                        if (displayWindow.document.documentElement.requestFullscreen) {
+                            displayWindow.document.documentElement.requestFullscreen().catch(err => {
+                                console.log('Fullscreen request failed:', err);
+                                console.log('Please press F11 in the display window to enter fullscreen mode.');
+                            });
+                        }
+                    }, 1000);
+                    
+                    // Focus back to main window after 2 seconds
+                    setTimeout(() => {
+                        window.focus();
+                        console.log('Focused back to main window');
+                    }, 2000);
+                }
             }
         </script>
 
